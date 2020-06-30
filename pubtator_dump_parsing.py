@@ -6,7 +6,7 @@ from typing import List, NamedTuple
 from util import data_io
 
 
-def doc_generator(file_path):
+def doc_generator(file_path,limit=None):
     """
     PubTator docs are of the form:
 
@@ -18,17 +18,20 @@ def doc_generator(file_path):
     See -- data/bioconcepts2pubtator_offsets.sample
 
     """
-    with codecs.open(file_path, "rU", encoding="utf-8") as fp:
-        lines = []
-        for line in fp:
-            if len(line.rstrip()) == 0:
-                if len(lines) > 0:
-                    # filter docs to target set
-                    doc_id = re.split(r'\|', lines[0].rstrip(), maxsplit=2)
-                    yield lines
-                    lines = []
-            else:
-                lines.append(line)
+    k=0
+    lines = []
+    for line in data_io.read_lines(file_path):
+        if len(line.rstrip()) == 0:
+            if len(lines) > 0:
+                # filter docs to target set
+                doc_id = re.split(r'\|', lines[0].rstrip(), maxsplit=2)
+                yield lines
+                lines = []
+                k+=1
+                if limit is not None and k>limit:
+                    break
+        else:
+            lines.append(line)
 
 def get_stable_id(doc_id):
     return "%s::document:0:0" % doc_id
@@ -100,7 +103,8 @@ def pubtator_parser(content:List[str]):
 
 if __name__ == '__main__':
 
-    file_path = os.environ["HOME"]+'/code/NLP/IE/pubtator/download/bioconcepts2pubtatorcentral.offset.sample'
-    g = (pubtator_parser(content) for content in doc_generator(file_path))
+    # file_path = os.environ["HOME"]+'/code/NLP/IE/pubtator/download/bioconcepts2pubtatorcentral.offset.sample'
+    file_path = os.environ["HOME"]+'/pubtator/download/bioconcepts2pubtatorcentral.offset.gz'
+    g = (pubtator_parser(content) for content in doc_generator(file_path,limit=100))
     data_io.write_jsonl('./parsed.jsonl',g)
 
