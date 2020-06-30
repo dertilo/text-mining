@@ -6,42 +6,47 @@ we want to find the most similar sentence in this corpus.
 
 This script outputs for various queries the top 5 most similar sentences in the corpus.
 """
+from functools import partial
+from tqdm import tqdm
+
+from typing import List
+
+import os
+
 from sentence_transformers import SentenceTransformer
 import scipy.spatial
+from util import util_methods
 
-embedder = SentenceTransformer('bert-base-nli-mean-tokens')
-
-# Corpus with example sentences
-corpus = ['A man is eating food.',
-          'A man is eating a piece of bread.',
-          'The girl is carrying a baby.',
-          'A man is riding a horse.',
-          'A woman is playing violin.',
-          'Two men pushed carts through the woods.',
-          'A man is riding a white horse on an enclosed ground.',
-          'A monkey is playing drums.',
-          'A cheetah is running behind its prey.'
-          ]
-corpus_embeddings = embedder.encode(corpus)
-
-# Query sentences:
-queries = ['A man is eating pasta.', 'Someone in a gorilla costume is playing a set of drums.', 'A cheetah chases prey on across a field.']
-query_embeddings = embedder.encode(queries)
-
-# Find the closest 5 sentences of the corpus for each query sentence based on cosine similarity
-closest_n = 5
-for query, query_embedding in zip(queries, query_embeddings):
-    distances = scipy.spatial.distance.cdist([query_embedding], corpus_embeddings, "cosine")[0]
-
-    results = zip(range(len(distances)), distances)
-    results = sorted(results, key=lambda x: x[1])
-
-    print("\n\n======================\n\n")
-    print("Query:", query)
-    print("\nTop 5 most similar sentences in corpus:")
-
-    for idx, distance in results[0:closest_n]:
-        print(corpus[idx].strip(), "(Score: %.4f)" % (1-distance))
+from pubtator_dump_parsing import doc_generator, pubtator_parser
 
 
+def calc_similarities(corpus: List[str], embedder, query: str):
+    corpus_embeddings = embedder.encode(corpus)
+    query_embeddings = embedder.encode([query])
+    distances = scipy.spatial.distance.cdist(
+        query_embeddings, corpus_embeddings, "cosine"
+    )[0]
+    similarities = [1 - dist for dist in distances]
+    return [(s, sim) for s, sim in zip(corpus, similarities)]
 
+
+if __name__ == "__main__":
+
+    import spacy
+
+    nlp = spacy.load("en_core_web_sm")
+    file_path = (
+        os.environ["HOME"]
+        + "/code/NLP/IE/pubtator/download/bioconcepts2pubtatorcentral.offset.sample"
+    )
+    g = (pubtator_parser(content) for content in doc_generator(file_path))
+    texts_g = (sent.text for d in g for sent in nlp(d["text"]).sents)
+
+    embedder = SentenceTransformer("bert-base-nli-mean-tokens")
+    query = "A substantial fraction of both mutants reached the surface even at low expression levels."
+    g = util_methods.process_batchwise(
+        partial(calc_similarities, embedder=embedder, query=query),
+        texts_g,
+        batch_size=32,
+    )
+    print(list(sorted(((s,sim) for s,sim in tqdm(g) if sim>0.5), key=lambda x: -x[1])))
