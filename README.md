@@ -1,5 +1,6 @@
 # text-mining
 * [BLUE](https://github.com/ncbi-nlp/BLUE_Benchmark)
+* [BLINK](https://github.com/facebookresearch/BLINK)
 ### [BLUE-BERT](https://github.com/ncbi-nlp/bluebert)
 
 0. `cd bluebert && pip install -r requirements.txt`
@@ -28,3 +29,8 @@ python bluebert/run_bluebert_ner.py \
 ```
 ### [PubTator](https://www.ncbi.nlm.nih.gov/CBBresearch/Lu/Demo/PubTator/)
 1. get data: `wget --trust-server-names ftp://ftp.ncbi.nlm.nih.gov/pub/lu/PubTator/bioconcepts2pubtator_offsets.gz`
+
+
+### sematic search
+
+1. install sentence-transformers: `git clone https://github.com/UKPLab/sentence-transformers.git && cd sentence-transformers && pip install -e .`
