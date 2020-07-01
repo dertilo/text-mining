@@ -15,38 +15,42 @@ import os
 
 from sentence_transformers import SentenceTransformer
 import scipy.spatial
-from util import util_methods
+from util import util_methods, data_io
 
 from pubtator_dump_parsing import doc_generator, pubtator_parser
 
 
 def calc_similarities(corpus: List[str], embedder, query: str):
-    corpus_embeddings = embedder.encode(corpus)
+    corpus_embeddings = embedder.encode(corpus, batch_size=8)
     query_embeddings = embedder.encode([query])
     distances = scipy.spatial.distance.cdist(
         query_embeddings, corpus_embeddings, "cosine"
     )[0]
     similarities = [1 - dist for dist in distances]
-    return [(s, sim) for s, sim in zip(corpus, similarities)]
+    return [(s, float(sim)) for s, sim in zip(corpus, similarities)]
 
 
 if __name__ == "__main__":
 
     import spacy
 
-    nlp = spacy.load("en_core_web_sm")
+    # nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.blank("en")
+    nlp.add_pipe(nlp.create_pipe("sentencizer"))
+
     file_path = (
-        os.environ["HOME"]
-        + "/code/NLP/IE/pubtator/download/bioconcepts2pubtatorcentral.offset.sample"
+        os.environ["HOME"] + "/pubtator/download/bioconcepts2pubtatorcentral.offset.gz"
     )
-    g = (pubtator_parser(content) for content in doc_generator(file_path))
+    g = (pubtator_parser(content) for content in doc_generator(file_path, limit=100_000))
     texts_g = (sent.text for d in g for sent in nlp(d["text"]).sents)
 
     embedder = SentenceTransformer("bert-base-nli-mean-tokens")
-    query = "A substantial fraction of both mutants reached the surface even at low expression levels."
+    query = "Clinical characteristics of novel coronavirus disease 2019 (COVID-19) in newborns, infants and children"
     g = util_methods.process_batchwise(
         partial(calc_similarities, embedder=embedder, query=query),
         texts_g,
-        batch_size=32,
+        batch_size=1024,
     )
-    print(list(sorted(((s,sim) for s,sim in tqdm(g) if sim>0.5), key=lambda x: -x[1])))
+    data_io.write_lines(
+        "results.csv", ("\t".join([s, str(sim)]) for s, sim in tqdm(g) if sim > 0.9),
+    )
