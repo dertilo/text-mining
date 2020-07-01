@@ -34,3 +34,16 @@ python bluebert/run_bluebert_ner.py \
 ### sematic search
 
 1. install sentence-transformers: `git clone https://github.com/UKPLab/sentence-transformers.git && cd sentence-transformers && pip install -e .`
+2. run: `python semantic_searching.py`
+3. see results:
+    ```shell script
+    908660it [54:27, 278.06it/s]
+    
+    cat results.csv
+    
+    Clinical characteristics of novel coronavirus disease 2019 (COVID-19) in newborns, infants and children 0.9999999999999191
+    Clinical and CT imaging features of 2019 novel coronavirus disease (COVID-19)   0.903914699472257
+    Proposal for prevention and control of the 2019 novel coronavirus disease in newborn infants    0.94718772532202
+    A contingency plan for the management of the 2019 novel coronavirus outbreak in neonatal intensive care units   0.9075958457497044
+    
+    ```
